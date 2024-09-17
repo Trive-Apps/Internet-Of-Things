@@ -55,13 +55,13 @@ float temp_C = 0;
 // =====================================================
 
 float calibrate_voltage(float value){
-  const float target_voltage = 400.0;
-  return (target_voltage / value) * value; 
+  const float calibrator_voltage = 36.03;
+  return value * calibrator_voltage; 
 }
 
 float calibrate_current(float value){
-  const float target_current = 2.5;
-  return (target_current / (value / 1000)) * value;       // 1000 is value to convert mA to A
+  const float calibrator_current = 58.82;
+  return (value / 1000) * calibrator_current;             // 1000 is value to convert mA to A
 }
 
 float calibrate_power(float value){
