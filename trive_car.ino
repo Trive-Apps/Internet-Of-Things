@@ -21,8 +21,8 @@ const char* password = getPassword();
 
 const String FIRESTORE_URL = getFirestoreUrl();
 
-// unsigned long interval = 120000;  // 2 min
-unsigned long interval = 3000;  // 500 millis
+// unsigned long interval = 120000;                            // 2 min interval to send data
+unsigned long interval = 3000;                              // 500 millis interval to send data
 unsigned long prev_millis = 0;
 
 
@@ -33,12 +33,10 @@ unsigned long prev_millis = 0;
 Adafruit_INA219 ina219;
 
 float voltage_V, current_mA, power_mW, battery_percentage;
-
+float calibrated_voltage_V, calibrated_current_A, calibrated_power_kW;
 
 const float full_voltage = 12.6;
 const float zero_voltage = 9.0;
-
-
 
 
 // =====================================================
@@ -56,6 +54,20 @@ float temp_C = 0;
 // |                     FUNCTIONS                     |
 // =====================================================
 
+float calibrate_voltage(float value){
+  const float calibrator_voltage = 400.0;
+  return calibrator_voltage / value;
+}
+
+float calibrate_current(float value){
+  const float calibrator_current = 2.5;
+  return calibrator_current / (value / 1000);                // 1000 is value to convert mA to A
+}
+
+float calibrate_power(float value){
+  return value / 1000000;                                 // 1000000 is value to convert mW to kW
+}
+
 void read_data(){
   // Read bus Voltage, Current, and Power
   voltage_V = ina219.getBusVoltage_V();
@@ -68,14 +80,23 @@ void read_data(){
 
   // Read temperature in Celsius
   temp_C = dht22.readTemperature();
+
+  // Calibrating
+  calibrated_voltage_V = calibrate_voltage(voltage_V);
+  calibrated_current_A = calibrate_current(current_mA);
+  calibrated_power_kW = calibrate_power(power_mW);
 }
 
-void print_data(){
-  Serial.print("Temperature: "); Serial.print(temp_C, 1); Serial.print("C | ");
-  Serial.print("Voltage: "); Serial.print(voltage_V, 1); Serial.print("V | ");
-  Serial.print("Current: "); Serial.print(current_mA, 1); Serial.print("mA | ");
-  Serial.print("Power: "); Serial.print(power_mW, 1); Serial.print("mW | ");
-  Serial.print("Battery: "); Serial.print(battery_percentage, 1); Serial.println("%");
+void display_data(){
+  Serial.println("==========================================================================================");
+  Serial.print("Voltage\t\t: "); Serial.print(voltage_V); Serial.println("V");
+  Serial.print("Current\t\t: "); Serial.print(current_mA); Serial.println("mA");
+  Serial.print("Power\t\t: "); Serial.print(power_mW); Serial.println("mW");
+  Serial.print("C.Voltage\t: "); Serial.print(calibrated_voltage_V); Serial.println("V");
+  Serial.print("C.Current\t: "); Serial.print(calibrated_current_A); Serial.println("A");
+  Serial.print("C.Power\t\t: "); Serial.print(calibrated_power_kW, 6); Serial.println("kW");
+  Serial.print("Temperature\t: "); Serial.print(temp_C); Serial.println("C");
+  Serial.print("Battery\t\t: "); Serial.print(battery_percentage); Serial.println("%\n");
 }
 
 String get_json_data(){
@@ -83,10 +104,13 @@ String get_json_data(){
 
   // Create JSON data to send
   StaticJsonDocument<200> doc;
-  doc["fields"]["temperature"]["doubleValue"] = temp_C;
   doc["fields"]["voltage"]["doubleValue"] = voltage_V;
   doc["fields"]["current"]["doubleValue"] = current_mA;
   doc["fields"]["power"]["doubleValue"] = power_mW;
+  doc["fields"]["calibrated_voltage"]["doubleValue"] = calibrated_voltage_V;
+  doc["fields"]["calibrated_current"]["doubleValue"] = calibrated_current_A;
+  doc["fields"]["calibrated_power"]["doubleValue"] = calibrated_power_kW;
+  doc["fields"]["temperature"]["doubleValue"] = temp_C;
   doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
 
   // Convert JSON to string
@@ -126,6 +150,21 @@ void send_data(){
   
 }
 
+void display_banner(){
+  Serial.println("░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+  Serial.println("░░░░░░░░▓████████▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+  Serial.println("░░░░░▓█▓▒▒▒░░░░▒▒▒▓█▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+  Serial.println("░░░░▒▒▓███▓░░░░▓███▓▒▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+  Serial.println("░░░██▓▒▒▒███▓▓███▒▒░███░░░▒█████████▓▒█▓░░░░░░██░▓█████████░▒█▓░▒████░░░▓███▒░▓████████▒░░");
+  Serial.println("░░▒██▒███▒▒████▒▒███▒██▒░░░░░░▒█▓░░░░▒█▓░░░░░▒██░▓█▒░░░░░▓█▒▒█▓░░▒██▓░░░░██▒░░▓█▒░░░░░░░░░");
+  Serial.println("░░▒██░░▓██▒░██░▓██▒░▒██▒░░░░░░▒█▓░░░░▒██████████░▓█████████▒▒█▓░░░░███▓░██░░░░▓███████░░░░");
+  Serial.println("░░░██▓░░▒██▒▒░▓██░░░███░░░░░░░▒█▓░░░░▒█▓░░░░░░██░▓█▓░░▒██▓░░▒█▓░░░░░██▒██░░░░░▓█▒░░░░░░░░░");
+  Serial.println("░░░▒██▓░░▓██░░██▒░░▓██▒░░░░░░░▒█▓░░░░▒█▓░░░░░░█▓░▒█▒░░░░▒██░▒█▓░░░░░░▒█▓░░░░░░▓████████▒░░");
+  Serial.println("░░░░░███▓░██▒▓██░▓██▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+  Serial.println("░░░░░░░▓█░██▒▓██░█▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+  Serial.println("░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░");
+}
+
 
 // =====================================================
 // |                   MAIN FUNCTION                   |
@@ -134,6 +173,9 @@ void send_data(){
 void setup() {
   // Open serial communications
   Serial.begin(115200);
+  
+  Serial.println("==========================================================================================");
+  display_banner();
 
   // Connecting to WiFi
   WiFi.begin(ssid, password);
@@ -150,7 +192,7 @@ void setup() {
 
   // Initialize the DHT22 sensor
   dht22.begin();
-  Serial.println("DHT22 sensor ready");
+  Serial.println("DHT22 sensor ready\n");
 }
 
 void loop() {
@@ -161,7 +203,7 @@ void loop() {
     prev_millis = cur_millis;
 
     read_data();
-    print_data();
+    display_data();
     // send_data();
   }
 }
