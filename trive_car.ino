@@ -33,7 +33,7 @@ unsigned long prev_millis = 0;
 Adafruit_INA219 ina219;
 
 float voltage_V, current_mA, power_mW, battery_percentage;
-float 
+
 
 const float full_voltage = 12.6;
 const float zero_voltage = 9.0;
