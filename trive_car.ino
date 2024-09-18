@@ -8,21 +8,11 @@
 
 
 // =====================================================
-// |                WIFI CONFIGURATION                 |
+// |               TIMING CONFIGURATION                |
 // =====================================================
 
-const char* ssid = getSSID();
-const char* password = getPassword();
-
-
-// =====================================================
-// |              FIREBASE CONFIGURATION               |
-// =====================================================
-
-const String FIRESTORE_URL = getFirestoreUrl();
-
-// unsigned long interval = 120000;                            // 2 min interval to send data
-unsigned long interval = 3000;                              // 500 millis interval to send data
+unsigned long arr_interval[4] = {120000, 60000, 30000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
+unsigned long interval = arr_interval[2];
 unsigned long prev_millis = 0;
 
 
@@ -88,16 +78,20 @@ void read_data(){
 }
 
 void display_data(){
-  Serial.println("==========================================================================================");
-  Serial.print("Voltage\t\t: "); Serial.print(voltage_V); Serial.println("V");
-  Serial.print("Current\t\t: "); Serial.print(current_mA); Serial.println("mA");
-  Serial.print("Power\t\t: "); Serial.print(power_mW); Serial.println("mW");
-  Serial.print("C.Voltage\t: "); Serial.print(calibrated_voltage_V); Serial.println("V");
-  Serial.print("C.Current\t: "); Serial.print(calibrated_current_A); Serial.println("A");
-  Serial.print("C.Power\t\t: "); Serial.print(calibrated_power_kW, 6); Serial.println("kW");
-  Serial.print("Temperature\t: "); Serial.print(temp_C); Serial.println("C");
-  Serial.print("Battery\t\t: "); Serial.print(battery_percentage); Serial.println("%\n");
+  Serial.println("=================================");
+  Serial.println("| Parameter      | Value\t|");
+  Serial.println("=================================");
+  Serial.print("| Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");
+  Serial.print("| Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");
+  Serial.print("| Power          | "); Serial.print(power_mW, 2); Serial.println(" mW\t|");
+  Serial.print("| C.Voltage      | "); Serial.print(calibrated_voltage_V, 2); Serial.println(" V\t|");
+  Serial.print("| C.Current      | "); Serial.print(calibrated_current_A, 6); Serial.println(" A\t|");
+  Serial.print("| C.Power        | "); Serial.print(calibrated_power_kW, 6); Serial.println(" kW\t|");
+  Serial.print("| Temperature    | "); Serial.print(temp_C, 2); Serial.println(" C\t|");
+  Serial.print("| Battery        | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");
+  Serial.println("=================================");
 }
+
 
 String get_json_data(){
   Serial.println("Creating JSON data...");
@@ -119,7 +113,6 @@ String get_json_data(){
 
   // Show data in Serial
   Serial.println("JSON data created");
-  Serial.println(jsonData);
 
   return jsonData;
 }
@@ -138,9 +131,12 @@ void send_data(){
     short httpResponseCode = http.POST(jsonData);         // Send data with POST method
 
     if (httpResponseCode > 0) {
+      Serial.println("Data sended to Firestore");
+      
       String response = http.getString();                 // Respons from server
       Serial.println("Response: " + response);
     } else {
+      Serial.println("Fail to send data");
       Serial.println("Error sending POST: " + String(httpResponseCode));
     }
     http.end();
@@ -177,11 +173,10 @@ void setup() {
   // Open serial communications
   Serial.begin(115200);
   
-  Serial.println("==========================================================================================");
   display_banner();
 
   // Connecting to WiFi
-  WiFi.begin(ssid, password);
+  WiFi.begin(SSID, PASSWORD);
   Serial.print("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -195,7 +190,9 @@ void setup() {
 
   // Initialize the DHT22 sensor
   dht22.begin();
-  Serial.println("DHT22 sensor ready\n");
+  Serial.println("DHT22 sensor ready");
+
+  Serial.println("Car Started\n");
 }
 
 void loop() {
@@ -207,6 +204,6 @@ void loop() {
 
     read_data();
     display_data();
-    // send_data();
+    send_data();
   }
 }

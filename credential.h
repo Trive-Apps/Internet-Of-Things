@@ -3,9 +3,9 @@
 
 #include <Arduino.h>
 
-const char* getSSID();
-const char* getPassword();
+extern const char* SSID;
+extern const char* PASSWORD;
 
-String getFirestoreUrl();
+extern const String FIRESTORE_URL;
 
 #endif
