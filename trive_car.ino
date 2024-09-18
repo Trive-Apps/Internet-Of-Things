@@ -11,9 +11,25 @@
 // |               TIMING CONFIGURATION                |
 // =====================================================
 
-unsigned long arr_interval[4] = {120000, 60000, 30000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
+unsigned long arr_interval[] = {120000, 60000, 30000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
 unsigned long interval = arr_interval[2];
 unsigned long prev_millis = 0;
+
+
+// =====================================================
+// |                DATA CONFIGURATION                 |
+// =====================================================
+
+const bool arr_data_config[] = {
+  false,   // Voltage
+  false,   // Current
+  false,   // Power
+  true,   // Calibrated Voltage
+  true,   // Calibrated Current
+  true,   // Calibrated Power
+  true,   // Temperature
+  false,   // Battery Percentage
+};
 
 
 // =====================================================
@@ -55,7 +71,8 @@ float calibrate_current(float value){
 }
 
 float calibrate_power(float value){
-  return value / 1000000;                                 // 1000000 is value to convert mW to kW
+  // return value / 1000000;                                 // 1000000 is value to convert mW to kW
+  return value / 3.5;                                       // ((value / 1000000) * 1000000) / 3.5
 }
 
 void read_data(){
@@ -81,14 +98,16 @@ void display_data(){
   Serial.println("=================================");
   Serial.println("| Parameter      | Value\t|");
   Serial.println("=================================");
-  Serial.print("| Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");
-  Serial.print("| Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");
-  Serial.print("| Power          | "); Serial.print(power_mW, 2); Serial.println(" mW\t|");
-  Serial.print("| C.Voltage      | "); Serial.print(calibrated_voltage_V, 2); Serial.println(" V\t|");
-  Serial.print("| C.Current      | "); Serial.print(calibrated_current_A, 6); Serial.println(" A\t|");
-  Serial.print("| C.Power        | "); Serial.print(calibrated_power_kW, 6); Serial.println(" kW\t|");
-  Serial.print("| Temperature    | "); Serial.print(temp_C, 2); Serial.println(" C\t|");
-  Serial.print("| Battery        | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");
+
+  if(arr_data_config[0]) {Serial.print("| Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");}
+  if(arr_data_config[1]) {Serial.print("| Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");}
+  if(arr_data_config[2]) {Serial.print("| Power          | "); Serial.print(power_mW, 2); Serial.println(" mW\t|");}
+  if(arr_data_config[3]) {Serial.print("| C.Voltage      | "); Serial.print(calibrated_voltage_V, 2); Serial.println(" V\t|");}
+  if(arr_data_config[4]) {Serial.print("| C.Current      | "); Serial.print(calibrated_current_A, 6); Serial.println(" A\t|");}
+  if(arr_data_config[5]) {Serial.print("| C.Power        | "); Serial.print(calibrated_power_kW, 6); Serial.println(arr_data_config[0] ? " kWh\t|" : " kWh |");}
+  if(arr_data_config[6]) {Serial.print("| Temperature    | "); Serial.print(temp_C, 2); Serial.println(" C\t|");}
+  if(arr_data_config[7]) {Serial.print("| Battery        | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");}
+  
   Serial.println("=================================");
 }
 
@@ -98,14 +117,15 @@ String get_json_data(){
 
   // Create JSON data to send
   StaticJsonDocument<200> doc;
-  doc["fields"]["voltage"]["doubleValue"] = voltage_V;
-  doc["fields"]["current"]["doubleValue"] = current_mA;
-  doc["fields"]["power"]["doubleValue"] = power_mW;
-  doc["fields"]["calibrated_voltage"]["doubleValue"] = calibrated_voltage_V;
-  doc["fields"]["calibrated_current"]["doubleValue"] = calibrated_current_A;
-  doc["fields"]["calibrated_power"]["doubleValue"] = calibrated_power_kW;
-  doc["fields"]["temperature"]["doubleValue"] = temp_C;
-  doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
+
+  if(arr_data_config[0]) doc["fields"]["voltage"]["doubleValue"] = voltage_V;
+  if(arr_data_config[1]) doc["fields"]["current"]["doubleValue"] = current_mA;
+  if(arr_data_config[2]) doc["fields"]["power"]["doubleValue"] = power_mW;
+  if(arr_data_config[3]) doc["fields"]["calibrated_voltage"]["doubleValue"] = calibrated_voltage_V;
+  if(arr_data_config[4]) doc["fields"]["calibrated_current"]["doubleValue"] = calibrated_current_A;
+  if(arr_data_config[5]) doc["fields"]["calibrated_power"]["doubleValue"] = calibrated_power_kW;
+  if(arr_data_config[6]) doc["fields"]["temperature"]["doubleValue"] = temp_C;
+  if(arr_data_config[7]) doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
 
   // Convert JSON to string
   String jsonData;
@@ -132,7 +152,7 @@ void send_data(){
 
     if (httpResponseCode > 0) {
       Serial.println("Data sended to Firestore");
-      
+
       String response = http.getString();                 // Respons from server
       Serial.println("Response: " + response);
     } else {
