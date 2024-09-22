@@ -8,18 +8,10 @@
 
 
 // =====================================================
-// |               TIMING CONFIGURATION                |
-// =====================================================
-
-unsigned long arr_interval[] = {120000, 60000, 30000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
-unsigned long interval = arr_interval[2];
-unsigned long prev_millis = 0;
-
-
-// =====================================================
 // |                DATA CONFIGURATION                 |
 // =====================================================
 
+// The data to be sent
 const bool arr_data_config[] = {
   false,   // Voltage
   false,   // Current
@@ -31,6 +23,18 @@ const bool arr_data_config[] = {
   false,   // Battery Percentage
 };
 
+// Other data to be sent
+const String car_token = "TRIVE12345";
+const String car_type = "HIYUNDAI";
+const String car_name = "IONIQ 5";
+
+// Time interval for updating data
+unsigned long arr_interval[] = {120000, 60000, 30000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
+unsigned long interval = arr_interval[0];
+unsigned long prev_millis = 0;
+
+// State whether the car is at fault
+bool isActive = false;
 
 // =====================================================
 // |        INA21 CURRENT SENSOR CONFIGURATION         |
@@ -95,6 +99,10 @@ void read_data(){
 }
 
 void display_data(){
+  Serial.println("Car name\t: "); Serial.println(car_name);
+  Serial.println("Car type\t: "); Serial.println(car_type);
+  Serial.println("Car token\t: "); Serial.println(car_token);
+
   Serial.println("=================================");
   Serial.println("| Parameter      | Value\t|");
   Serial.println("=================================");
@@ -189,7 +197,7 @@ void display_banner(){
 // |                   MAIN FUNCTION                   |
 // =====================================================
 
-void setup() {
+void setup(){
   // Open serial communications
   Serial.begin(115200);
   
@@ -215,7 +223,7 @@ void setup() {
   Serial.println("Car Started\n");
 }
 
-void loop() {
+void loop(){
   unsigned long cur_millis = millis();
 
   // Mengeksekusi setiap 2 menit
@@ -224,6 +232,6 @@ void loop() {
 
     read_data();
     display_data();
-    send_data();
+    // send_data();
   }
 }
