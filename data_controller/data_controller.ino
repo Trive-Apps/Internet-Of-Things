@@ -19,22 +19,37 @@ const bool arr_data_config[] = {
   true,   // Calibrated Voltage
   true,   // Calibrated Current
   true,   // Calibrated Power
+  true,   // Persentage Calibrated Power
   true,   // Temperature
   false,   // Battery Percentage
+  true,   // Latitude
+  true,   // Longtitude
+  true,   // Is Active?
 };
 
 // Other data to be sent
-const String car_token = "TRIVE12345";
-const String car_type = "HIYUNDAI";
-const String car_name = "IONIQ 5";
-
-// Time interval for updating data
-unsigned long arr_interval[] = {120000, 60000, 30000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
-unsigned long interval = arr_interval[0];
-unsigned long prev_millis = 0;
+const String token = "SCI-2024";
+const String type = "Hyundai";
+const String brand = "IONIQ 5";
 
 // State whether the car is at fault
-bool isActive = false;
+bool is_active = false;
+
+// Time interval for updating data
+unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
+unsigned long interval = arr_interval[3];
+unsigned long prev_millis = 0;
+
+// Iteration
+int iteration = 1;
+
+// =====================================================
+// |            GPS LOCATION CONFIGURATION             |
+// =====================================================
+
+const double latitude = -6.2519242;
+const double longitude = 106.8392311;
+
 
 // =====================================================
 // |        INA21 CURRENT SENSOR CONFIGURATION         |
@@ -43,7 +58,7 @@ bool isActive = false;
 Adafruit_INA219 ina219;
 
 float voltage_V, current_mA, power_mW, battery_percentage;
-float calibrated_voltage_V, calibrated_current_A, calibrated_power_kW;
+float calibrated_voltage_V, calibrated_current_A, calibrated_power_kW, persentage_calibrated_power;
 
 const float full_voltage = 12.6;
 const float zero_voltage = 9.0;
@@ -65,58 +80,71 @@ float temp_C = 0;
 // =====================================================
 
 float calibrate_voltage(float value){
-  const float calibrator_voltage = 36.03;
-  return value * calibrator_voltage; 
+  return value * 35.44; 
 }
 
 float calibrate_current(float value){
-  const float calibrator_current = 58.82;
-  return (value / 1000) * calibrator_current;             // 1000 is value to convert mA to A
+  return (value / 1000) * 60.2;             // 1000 is value to convert mA to A
 }
 
 float calibrate_power(float value){
-  // return value / 1000000;                                 // 1000000 is value to convert mW to kW
-  return value / 3.5;                                       // ((value / 1000000) * 1000000) / 3.5
+  // 1000000 is value to convert mW to kW
+  // return (value / 1000000) * 677.42;
+  return (value / 10000) * 677.42;
+}
+
+float get_power_persentage(float value){
+  // percentagePower = (nilai sensor / 18.8 ) * 100%
+  return (value / 18.8) * 100;
 }
 
 void read_data(){
   // Read bus Voltage, Current, and Power
-  voltage_V = ina219.getBusVoltage_V();
-  current_mA = ina219.getCurrent_mA();
-  power_mW = ina219.getPower_mW();
+  voltage_V = ina219.getBusVoltage_V();     // V
+  current_mA = ina219.getCurrent_mA();      // mA
+  power_mW = ina219.getPower_mW();          // mW
 
   // Calculates battery percentage
-  // Battery Percentage = ((BV-9V)/(12.6V-9V))X100%
+  // Battery Percentage = ((BV-9V)/(11.1V-9V))X100%
   battery_percentage = ((voltage_V - zero_voltage) / (full_voltage - zero_voltage)) * 100;
 
   // Read temperature in Celsius
   temp_C = dht22.readTemperature();
 
   // Calibrating
-  calibrated_voltage_V = calibrate_voltage(voltage_V);
-  calibrated_current_A = calibrate_current(current_mA);
-  calibrated_power_kW = calibrate_power(power_mW);
+  calibrated_voltage_V = calibrate_voltage(voltage_V);    // V
+  calibrated_current_A = calibrate_current(current_mA);   // A
+  calibrated_power_kW = calibrate_power(power_mW);        // kW
+  persentage_calibrated_power = get_power_persentage(calibrated_power_kW);    // %
+
+  // Set is_active
+  is_active = calibrated_voltage_V >= 100 && calibrated_current_A <= 0 ? false : true;
 }
 
 void display_data(){
-  Serial.println("Car name\t: "); Serial.println(car_name);
-  Serial.println("Car type\t: "); Serial.println(car_type);
-  Serial.println("Car token\t: "); Serial.println(car_token);
-
+  Serial.println(String(iteration) + " x Iteration");
   Serial.println("=================================");
-  Serial.println("| Parameter      | Value\t|");
+  Serial.println("| Parameter        | Value\t|");
   Serial.println("=================================");
 
-  if(arr_data_config[0]) {Serial.print("| Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");}
-  if(arr_data_config[1]) {Serial.print("| Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");}
-  if(arr_data_config[2]) {Serial.print("| Power          | "); Serial.print(power_mW, 2); Serial.println(" mW\t|");}
-  if(arr_data_config[3]) {Serial.print("| C.Voltage      | "); Serial.print(calibrated_voltage_V, 2); Serial.println(" V\t|");}
-  if(arr_data_config[4]) {Serial.print("| C.Current      | "); Serial.print(calibrated_current_A, 6); Serial.println(" A\t|");}
-  if(arr_data_config[5]) {Serial.print("| C.Power        | "); Serial.print(calibrated_power_kW, 6); Serial.println(arr_data_config[0] ? " kWh\t|" : " kWh |");}
-  if(arr_data_config[6]) {Serial.print("| Temperature    | "); Serial.print(temp_C, 2); Serial.println(" C\t|");}
-  if(arr_data_config[7]) {Serial.print("| Battery        | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");}
+  Serial.println("| Car Name         | " + brand + "\t|");
+  Serial.println("| Car Type         | " + type + "\t|");
+  Serial.println("| Car Token        | " + token + "\t|");
+
+  if(arr_data_config[0]) {Serial.print("| P.Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");}
+  if(arr_data_config[1]) {Serial.print("| P.Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");}
+  if(arr_data_config[2]) {Serial.print("| P.Power          | "); Serial.print(power_mW, 2); Serial.println(arr_data_config[0] ? " mW\t|" : " mW |");}
+  if(arr_data_config[3]) {Serial.print("| Voltage          | "); Serial.print(calibrated_voltage_V, 2); Serial.println(" V\t|");}
+  if(arr_data_config[4]) {Serial.print("| Current          | "); Serial.print(calibrated_current_A, 2); Serial.println(" A\t|");}
+  if(arr_data_config[5]) {Serial.print("| Power            | "); Serial.print(calibrated_power_kW, 2); Serial.println(" kW\t|");}
+  if(arr_data_config[6]) {Serial.print("| Persentage Power | "); Serial.print(persentage_calibrated_power, 2); Serial.println(" %\t|");}
+  if(arr_data_config[7]) {Serial.print("| Temperature      | "); Serial.print(temp_C, 2); Serial.println(" C\t|");}
+  if(arr_data_config[8]) {Serial.print("| Battery          | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");}
+  if(arr_data_config[9]) {Serial.print("| Latitude         | "); Serial.print(latitude); Serial.println(" ?\t|");}
+  if(arr_data_config[10]) {Serial.print("| Longitude        | "); Serial.print(longitude); Serial.println(" ?\t|");}
+  if(arr_data_config[11]) {Serial.print("| Is Active?       | "); Serial.println(is_active ? "True\t|" : "False\t|");}
   
-  Serial.println("=================================");
+  Serial.println("=================================\n");
 }
 
 
@@ -124,16 +152,24 @@ String get_json_data(){
   Serial.println("Creating JSON data...");
 
   // Create JSON data to send
-  StaticJsonDocument<200> doc;
+  StaticJsonDocument<512> doc;
 
-  if(arr_data_config[0]) doc["fields"]["voltage"]["doubleValue"] = voltage_V;
-  if(arr_data_config[1]) doc["fields"]["current"]["doubleValue"] = current_mA;
-  if(arr_data_config[2]) doc["fields"]["power"]["doubleValue"] = power_mW;
-  if(arr_data_config[3]) doc["fields"]["calibrated_voltage"]["doubleValue"] = calibrated_voltage_V;
-  if(arr_data_config[4]) doc["fields"]["calibrated_current"]["doubleValue"] = calibrated_current_A;
-  if(arr_data_config[5]) doc["fields"]["calibrated_power"]["doubleValue"] = calibrated_power_kW;
-  if(arr_data_config[6]) doc["fields"]["temperature"]["doubleValue"] = temp_C;
-  if(arr_data_config[7]) doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
+  doc["fields"]["brand"]["stringValue"] = brand;
+  doc["fields"]["type"]["stringValue"] = type;
+  doc["fields"]["token"]["stringValue"] = token;
+
+  if(arr_data_config[0]) doc["fields"]["pure_voltage"]["doubleValue"] = voltage_V;
+  if(arr_data_config[1]) doc["fields"]["pure_current"]["doubleValue"] = current_mA;
+  if(arr_data_config[2]) doc["fields"]["pure_power"]["doubleValue"] = power_mW;
+  if(arr_data_config[3]) doc["fields"]["voltage"]["doubleValue"] = calibrated_voltage_V;
+  if(arr_data_config[4]) doc["fields"]["current"]["doubleValue"] = calibrated_current_A;
+  if(arr_data_config[5]) doc["fields"]["power"]["doubleValue"] = calibrated_power_kW;
+  if(arr_data_config[6]) doc["fields"]["persentage_power"]["doubleValue"] = persentage_calibrated_power;
+  if(arr_data_config[7]) doc["fields"]["temperature"]["doubleValue"] = temp_C;
+  if(arr_data_config[8]) doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
+  if(arr_data_config[9]) doc["fields"]["latitude"]["doubleValue"] = latitude;
+  if(arr_data_config[10]) doc["fields"]["longitude"]["doubleValue"] = longitude;
+  if(arr_data_config[11]) doc["fields"]["isActive"]["booleanValue"] = is_active;
 
   // Convert JSON to string
   String jsonData;
@@ -232,6 +268,8 @@ void loop(){
 
     read_data();
     display_data();
-    // send_data();
+    send_data();
+
+    iteration++;
   }
 }
