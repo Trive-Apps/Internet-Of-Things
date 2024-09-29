@@ -8,6 +8,8 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <time.h>
+#include <TinyGPSPlus.h>
+#include <SoftwareSerial.h>
 
 
 // =====================================================
@@ -35,7 +37,7 @@ const bool arr_data_config[] = {
 const String token = "SCI-030924";
 const String type = "BMW I3";
 const String brand = "BMW";
-const String charger_type = "CCS2"
+const String charger_type = "CCS2";
 
 // State whether the car is at fault
 bool is_active = false;
@@ -52,8 +54,16 @@ int iteration = 1;
 // |            GPS LOCATION CONFIGURATION             |
 // =====================================================
 
-const double latitude = -6.2519242;
-const double longitude = 106.8392311;
+// const double latitude = -6.2519242;
+// const double longitude = 106.8392311;
+double latitude, longitude;
+
+// The TinyGPSPlus object
+TinyGPSPlus gps;
+
+// The serial connection to the GPS device
+const short rx_pin = 16, tx_pin = 17;
+SoftwareSerial ss(rx_pin, tx_pin);
 
 
 // =====================================================
@@ -85,12 +95,12 @@ float temp_C = 0;
 // =====================================================
 
 // NTP Server and time offset
-const long utcOffsetInSeconds = 28800; // 8 hours for Central Indonesian Time (WITA)
-const char* ntpServer = "pool.ntp.org";
+const long utc_offset_in_seconds = 28800; // 8 hours for Central Indonesian Time (WITA)
+const char* ntp_server = "pool.ntp.org";
 
 // Create an object for the NTP client
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, ntpServer, utcOffsetInSeconds);
+WiFiUDP ntp_UDP;
+NTPClient timeClient(ntp_UDP, ntp_server, utc_offset_in_seconds);
 
 unsigned long timestamp;  // Variable to store time in UNIX timestamp format
 
@@ -137,6 +147,10 @@ void read_data(){
   calibrated_power_kW = calibrate_power(power_mW);        // kW
   persentage_calibrated_power = get_power_persentage(calibrated_power_kW);    // %
 
+  // Read GPS Data
+  latitude = gps.location.isValid() ? gps.location.lat() : -6.2519242;
+  longitude = gps.location.isValid() ? gps.location.lng() : 106.8392311;
+
   // Set is_active
   is_active = calibrated_voltage_V >= 100 && calibrated_current_A <= 0 ? false : true;
 
@@ -147,7 +161,7 @@ void read_data(){
 
 void display_data(){
   Serial.println(String(iteration) + " x Iteration");
-  printReadableTime(timestamp);
+  print_readable_time(timestamp);
 
   Serial.println("=================================");
   Serial.println("| Parameter        | Value\t|");
@@ -167,8 +181,8 @@ void display_data(){
   if(arr_data_config[6]) {Serial.print("| Persentage Power | "); Serial.print(persentage_calibrated_power, 2); Serial.println(" %\t|");}
   if(arr_data_config[7]) {Serial.print("| Temperature      | "); Serial.print(temp_C, 2); Serial.println(" C\t|");}
   if(arr_data_config[8]) {Serial.print("| Battery          | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");}
-  if(arr_data_config[9]) {Serial.print("| Latitude         | "); Serial.print(latitude); Serial.println(" ?\t|");}
-  if(arr_data_config[10]) {Serial.print("| Longitude        | "); Serial.print(longitude); Serial.println(" ?\t|");}
+  if(arr_data_config[9]) {Serial.print("| Latitude         | "); Serial.print(latitude); Serial.println("\t|");}
+  if(arr_data_config[10]) {Serial.print("| Longitude        | "); Serial.print(longitude); Serial.println("\t|");}
   if(arr_data_config[11]) {Serial.print("| Is Active?       | "); Serial.println(is_active ? "True\t|" : "False\t|");}
   if(arr_data_config[12]) {Serial.print("| Timestamp        | "); Serial.print(timestamp); Serial.println("\t|");}
   
@@ -257,15 +271,15 @@ void display_banner(){
   Serial.println("                                                                                             ");
 }
 
-void printReadableTime(unsigned long epochTime) {
+void print_readable_time(unsigned long epoch_time) {
   // Konversi epoch time menjadi waktu yang mudah dibaca
-  time_t rawTime = epochTime;
-  struct tm *timeInfo;
-  timeInfo = localtime(&rawTime);
+  time_t raw_time = epoch_time;
+  struct tm *time_info;
+  time_info = localtime(&raw_time);
 
   // Format: HH:MM:SS DD/MM/YYYY
   char buffer[30];
-  strftime(buffer, sizeof(buffer), "%H:%M:%S %d/%m/%Y", timeInfo);
+  strftime(buffer, sizeof(buffer), "%H:%M:%S %d/%m/%Y", time_info);
 
   // Cetak waktu yang telah diformat
   Serial.print("Waktu sekarang: ");
@@ -299,9 +313,13 @@ void setup(){
   dht22.begin();
   Serial.println("DHT22 sensor ready");
 
-  // Starting NTP client
+  // Initialixe NTP client
   timeClient.begin();
-  Serial.println("NTP Client ready");
+  Serial.println("NTP client ready");
+
+  // Initialize Software Serial
+  ss.begin(115200);
+  Serial.println("Software serial ready");
 
   Serial.println("Car Started\n");
 }
