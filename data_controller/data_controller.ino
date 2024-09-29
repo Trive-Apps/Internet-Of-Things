@@ -5,6 +5,9 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <time.h>
 
 
 // =====================================================
@@ -25,6 +28,7 @@ const bool arr_data_config[] = {
   true,   // Latitude
   true,   // Longtitude
   true,   // Is Active?
+  true,   // Timestamp?
 };
 
 // Other data to be sent
@@ -76,6 +80,21 @@ float temp_C = 0;
 
 
 // =====================================================
+// |             NTP SERVER CONFIGURATION              |
+// =====================================================
+
+// NTP Server and time offset
+const long utcOffsetInSeconds = 28800; // 8 hours for Central Indonesian Time (WITA)
+const char* ntpServer = "pool.ntp.org";
+
+// Create an object for the NTP client
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, ntpServer, utcOffsetInSeconds);
+
+unsigned long timestamp;  // Variable to store time in UNIX timestamp format
+
+
+// =====================================================
 // |                     FUNCTIONS                     |
 // =====================================================
 
@@ -119,10 +138,16 @@ void read_data(){
 
   // Set is_active
   is_active = calibrated_voltage_V >= 100 && calibrated_current_A <= 0 ? false : true;
+
+  // Update time from NTP server & gets the timestamp of the epoch time
+  timeClient.update();
+  timestamp = timeClient.getEpochTime();
 }
 
 void display_data(){
   Serial.println(String(iteration) + " x Iteration");
+  printReadableTime(timestamp);
+
   Serial.println("=================================");
   Serial.println("| Parameter        | Value\t|");
   Serial.println("=================================");
@@ -143,10 +168,10 @@ void display_data(){
   if(arr_data_config[9]) {Serial.print("| Latitude         | "); Serial.print(latitude); Serial.println(" ?\t|");}
   if(arr_data_config[10]) {Serial.print("| Longitude        | "); Serial.print(longitude); Serial.println(" ?\t|");}
   if(arr_data_config[11]) {Serial.print("| Is Active?       | "); Serial.println(is_active ? "True\t|" : "False\t|");}
+  if(arr_data_config[12]) {Serial.print("| Timestamp        | "); Serial.print(timestamp); Serial.println("\t|");}
   
   Serial.println("=================================\n");
 }
-
 
 String get_json_data(){
   Serial.println("Creating JSON data...");
@@ -170,6 +195,7 @@ String get_json_data(){
   if(arr_data_config[9]) doc["fields"]["latitude"]["doubleValue"] = latitude;
   if(arr_data_config[10]) doc["fields"]["longitude"]["doubleValue"] = longitude;
   if(arr_data_config[11]) doc["fields"]["isActive"]["booleanValue"] = is_active;
+  if(arr_data_config[12]) doc["fields"]["timestamp"]["integerValue"] = timestamp;
 
   // Convert JSON to string
   String jsonData;
@@ -228,6 +254,20 @@ void display_banner(){
   Serial.println("                                                                                             ");
 }
 
+void printReadableTime(unsigned long epochTime) {
+  // Konversi epoch time menjadi waktu yang mudah dibaca
+  time_t rawTime = epochTime;
+  struct tm *timeInfo;
+  timeInfo = localtime(&rawTime);
+
+  // Format: HH:MM:SS DD/MM/YYYY
+  char buffer[30];
+  strftime(buffer, sizeof(buffer), "%H:%M:%S %d/%m/%Y", timeInfo);
+
+  // Cetak waktu yang telah diformat
+  Serial.print("Waktu sekarang: ");
+  Serial.println(buffer);
+}
 
 // =====================================================
 // |                   MAIN FUNCTION                   |
@@ -255,6 +295,10 @@ void setup(){
   // Initialize the DHT22 sensor
   dht22.begin();
   Serial.println("DHT22 sensor ready");
+
+  // Starting NTP client
+  timeClient.begin();
+  Serial.println("NTP Client ready");
 
   Serial.println("Car Started\n");
 }
