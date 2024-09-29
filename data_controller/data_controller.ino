@@ -32,9 +32,10 @@ const bool arr_data_config[] = {
 };
 
 // Other data to be sent
-const String token = "SCI-2024";
-const String type = "Hyundai";
-const String brand = "IONIQ 5";
+const String token = "SCI-030924";
+const String type = "BMW I3";
+const String brand = "BMW";
+const String charger_type = "CCS2"
 
 // State whether the car is at fault
 bool is_active = false;
@@ -155,6 +156,7 @@ void display_data(){
   Serial.println("| Car Name         | " + brand + "\t|");
   Serial.println("| Car Type         | " + type + "\t|");
   Serial.println("| Car Token        | " + token + "\t|");
+  Serial.println("| Charger Type     | " + charger_type + "\t|");
 
   if(arr_data_config[0]) {Serial.print("| P.Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");}
   if(arr_data_config[1]) {Serial.print("| P.Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");}
@@ -182,14 +184,15 @@ String get_json_data(){
   doc["fields"]["brand"]["stringValue"] = brand;
   doc["fields"]["type"]["stringValue"] = type;
   doc["fields"]["token"]["stringValue"] = token;
+  doc["fields"]["chargerType"]["stringValue"] = charger_type;
 
-  if(arr_data_config[0]) doc["fields"]["pure_voltage"]["doubleValue"] = voltage_V;
-  if(arr_data_config[1]) doc["fields"]["pure_current"]["doubleValue"] = current_mA;
-  if(arr_data_config[2]) doc["fields"]["pure_power"]["doubleValue"] = power_mW;
+  if(arr_data_config[0]) doc["fields"]["pureVoltage"]["doubleValue"] = voltage_V;
+  if(arr_data_config[1]) doc["fields"]["purCurrent"]["doubleValue"] = current_mA;
+  if(arr_data_config[2]) doc["fields"]["purePower"]["doubleValue"] = power_mW;
   if(arr_data_config[3]) doc["fields"]["voltage"]["doubleValue"] = calibrated_voltage_V;
   if(arr_data_config[4]) doc["fields"]["current"]["doubleValue"] = calibrated_current_A;
   if(arr_data_config[5]) doc["fields"]["power"]["doubleValue"] = calibrated_power_kW;
-  if(arr_data_config[6]) doc["fields"]["persentage_power"]["doubleValue"] = persentage_calibrated_power;
+  if(arr_data_config[6]) doc["fields"]["persentagePower"]["doubleValue"] = persentage_calibrated_power;
   if(arr_data_config[7]) doc["fields"]["temperature"]["doubleValue"] = temp_C;
   if(arr_data_config[8]) doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
   if(arr_data_config[9]) doc["fields"]["latitude"]["doubleValue"] = latitude;
