@@ -4,12 +4,12 @@
 BluetoothSerial SerialBT;
 
 // Motor pins (L298N)
-const int IN1 = 14;
-const int IN2 = 12;
-const int IN3 = 13;
-const int IN4 = 15;
-const int ENA = 3;
-const int ENB = 1;
+const int IN1 = 26;
+const int IN2 = 27;
+const int IN3 = 33;
+const int IN4 = 32;
+const int ENA = 14;
+const int ENB = 13;
 
 // PWM settings
 const int pwmFrequency = 5000; // 5 KHz
