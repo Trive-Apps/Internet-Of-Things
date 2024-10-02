@@ -149,8 +149,9 @@ void read_data(){
   persentage_calibrated_power = get_power_persentage(calibrated_power_kW);    // %
 
   // Read GPS Data
-  latitude = gps.location.isValid() ? gps.location.lat() :  -6.25192922646693;
-  longitude = gps.location.isValid() ? gps.location.lng() : 106.84180629007942;
+  // Graha Sucofindo (-6.25165, 106.84190)
+  latitude = gps.location.isValid() ? gps.location.lat() :  -6.25165;
+  longitude = gps.location.isValid() ? gps.location.lng() : 106.84190;
 
   // Set is_active
   is_active = calibrated_current_A <= 0 ? false : true;
