@@ -5,6 +5,11 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <time.h>
+#include <TinyGPSPlus.h>
+#include <SoftwareSerial.h>
 
 
 // =====================================================
@@ -25,18 +30,20 @@ const bool arr_data_config[] = {
   true,   // Latitude
   true,   // Longtitude
   true,   // Is Active?
+  true,   // Timestamp?
 };
 
 // Other data to be sent
-const String token = "SCI-2024";
-const String type = "Hyundai";
-const String brand = "IONIQ 5";
+const String token = "SCI-030924";
+const String type = "BMW I3";
+const String brand = "BMW";
+const String charger_type = "CCS2";
 
 // State whether the car is at fault
 bool is_active = false;
 
 // Time interval for updating data
-unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
+unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, or 5 sec interval to send data
 unsigned long interval = arr_interval[3];
 unsigned long prev_millis = 0;
 
@@ -47,8 +54,16 @@ int iteration = 1;
 // |            GPS LOCATION CONFIGURATION             |
 // =====================================================
 
-const double latitude = -6.2519242;
-const double longitude = 106.8392311;
+// const double latitude = -6.25192922646693;
+// const double longitude = 106.84180629007942;
+double latitude, longitude;
+
+// The TinyGPSPlus object
+TinyGPSPlus gps;
+
+// The serial connection to the GPS device
+const short rx_pin = 16, tx_pin = 17;
+SoftwareSerial ss(rx_pin, tx_pin);
 
 
 // =====================================================
@@ -73,6 +88,22 @@ const float zero_voltage = 9.0;
 DHT dht22(DHT22_PIN, DHT22);
 
 float temp_C = 0;
+
+
+// =====================================================
+// |             NTP SERVER CONFIGURATION              |
+// =====================================================
+
+// NTP Server and time offset
+// const long utc_offset_in_seconds = 28800; // 8 hours for Central Indonesian Time (WITA)
+const long utc_offset_in_seconds = 25200; // 7 hours for Central Indonesian Time (WIB)
+const char* ntp_server = "pool.ntp.org";
+
+// Create an object for the NTP client
+WiFiUDP ntp_UDP;
+NTPClient timeClient(ntp_UDP, ntp_server, utc_offset_in_seconds);
+
+unsigned long timestamp;  // Variable to store time in UNIX timestamp format
 
 
 // =====================================================
@@ -117,12 +148,22 @@ void read_data(){
   calibrated_power_kW = calibrate_power(power_mW);        // kW
   persentage_calibrated_power = get_power_persentage(calibrated_power_kW);    // %
 
+  // Read GPS Data
+  latitude = gps.location.isValid() ? gps.location.lat() :  -6.25192922646693;
+  longitude = gps.location.isValid() ? gps.location.lng() : 106.84180629007942;
+
   // Set is_active
-  is_active = calibrated_voltage_V >= 100 && calibrated_current_A <= 0 ? false : true;
+  is_active = calibrated_current_A <= 0 ? false : true;
+
+  // Update time from NTP server & gets the timestamp of the epoch time
+  timeClient.update();
+  timestamp = timeClient.getEpochTime();
 }
 
 void display_data(){
   Serial.println(String(iteration) + " x Iteration");
+  print_readable_time(timestamp);
+
   Serial.println("=================================");
   Serial.println("| Parameter        | Value\t|");
   Serial.println("=================================");
@@ -130,6 +171,7 @@ void display_data(){
   Serial.println("| Car Name         | " + brand + "\t|");
   Serial.println("| Car Type         | " + type + "\t|");
   Serial.println("| Car Token        | " + token + "\t|");
+  Serial.println("| Charger Type     | " + charger_type + "\t|");
 
   if(arr_data_config[0]) {Serial.print("| P.Voltage        | "); Serial.print(voltage_V, 2); Serial.println(" V\t|");}
   if(arr_data_config[1]) {Serial.print("| P.Current        | "); Serial.print(current_mA, 2); Serial.println(" mA\t|");}
@@ -140,13 +182,13 @@ void display_data(){
   if(arr_data_config[6]) {Serial.print("| Persentage Power | "); Serial.print(persentage_calibrated_power, 2); Serial.println(" %\t|");}
   if(arr_data_config[7]) {Serial.print("| Temperature      | "); Serial.print(temp_C, 2); Serial.println(" C\t|");}
   if(arr_data_config[8]) {Serial.print("| Battery          | "); Serial.print(battery_percentage, 2); Serial.println(" %\t|");}
-  if(arr_data_config[9]) {Serial.print("| Latitude         | "); Serial.print(latitude); Serial.println(" ?\t|");}
-  if(arr_data_config[10]) {Serial.print("| Longitude        | "); Serial.print(longitude); Serial.println(" ?\t|");}
+  if(arr_data_config[9]) {Serial.print("| Latitude         | "); Serial.print(latitude); Serial.println("\t|");}
+  if(arr_data_config[10]) {Serial.print("| Longitude        | "); Serial.print(longitude); Serial.println("\t|");}
   if(arr_data_config[11]) {Serial.print("| Is Active?       | "); Serial.println(is_active ? "True\t|" : "False\t|");}
+  if(arr_data_config[12]) {Serial.print("| Timestamp        | "); Serial.print(timestamp); Serial.println("\t|");}
   
   Serial.println("=================================\n");
 }
-
 
 String get_json_data(){
   Serial.println("Creating JSON data...");
@@ -157,19 +199,21 @@ String get_json_data(){
   doc["fields"]["brand"]["stringValue"] = brand;
   doc["fields"]["type"]["stringValue"] = type;
   doc["fields"]["token"]["stringValue"] = token;
+  doc["fields"]["chargerType"]["stringValue"] = charger_type;
 
-  if(arr_data_config[0]) doc["fields"]["pure_voltage"]["doubleValue"] = voltage_V;
-  if(arr_data_config[1]) doc["fields"]["pure_current"]["doubleValue"] = current_mA;
-  if(arr_data_config[2]) doc["fields"]["pure_power"]["doubleValue"] = power_mW;
+  if(arr_data_config[0]) doc["fields"]["pureVoltage"]["doubleValue"] = voltage_V;
+  if(arr_data_config[1]) doc["fields"]["purCurrent"]["doubleValue"] = current_mA;
+  if(arr_data_config[2]) doc["fields"]["purePower"]["doubleValue"] = power_mW;
   if(arr_data_config[3]) doc["fields"]["voltage"]["doubleValue"] = calibrated_voltage_V;
   if(arr_data_config[4]) doc["fields"]["current"]["doubleValue"] = calibrated_current_A;
   if(arr_data_config[5]) doc["fields"]["power"]["doubleValue"] = calibrated_power_kW;
-  if(arr_data_config[6]) doc["fields"]["persentage_power"]["doubleValue"] = persentage_calibrated_power;
+  if(arr_data_config[6]) doc["fields"]["persentagePower"]["doubleValue"] = persentage_calibrated_power;
   if(arr_data_config[7]) doc["fields"]["temperature"]["doubleValue"] = temp_C;
   if(arr_data_config[8]) doc["fields"]["percentage"]["doubleValue"] = battery_percentage;
   if(arr_data_config[9]) doc["fields"]["latitude"]["doubleValue"] = latitude;
   if(arr_data_config[10]) doc["fields"]["longitude"]["doubleValue"] = longitude;
   if(arr_data_config[11]) doc["fields"]["isActive"]["booleanValue"] = is_active;
+  if(arr_data_config[12]) doc["fields"]["timestamp"]["integerValue"] = timestamp;
 
   // Convert JSON to string
   String jsonData;
@@ -198,7 +242,7 @@ void send_data(){
       Serial.println("Data sended to Firestore");
 
       String response = http.getString();                 // Respons from server
-      Serial.println("Response: " + response);
+      // Serial.println("Response: " + response);
     } else {
       Serial.println("Fail to send data");
       Serial.println("Error sending POST: " + String(httpResponseCode));
@@ -228,6 +272,20 @@ void display_banner(){
   Serial.println("                                                                                             ");
 }
 
+void print_readable_time(unsigned long epoch_time) {
+  // Konversi epoch time menjadi waktu yang mudah dibaca
+  time_t raw_time = epoch_time;
+  struct tm *time_info;
+  time_info = localtime(&raw_time);
+
+  // Format: HH:MM:SS DD/MM/YYYY
+  char buffer[30];
+  strftime(buffer, sizeof(buffer), "%H:%M:%S %d/%m/%Y", time_info);
+
+  // Cetak waktu yang telah diformat
+  Serial.print("Waktu sekarang: ");
+  Serial.println(buffer);
+}
 
 // =====================================================
 // |                   MAIN FUNCTION                   |
@@ -256,13 +314,20 @@ void setup(){
   dht22.begin();
   Serial.println("DHT22 sensor ready");
 
+  // Initialixe NTP client
+  timeClient.begin();
+  Serial.println("NTP client ready");
+
+  // Initialize Software Serial
+  ss.begin(115200);
+  Serial.println("Software serial ready");
+
   Serial.println("Car Started\n");
 }
 
 void loop(){
   unsigned long cur_millis = millis();
 
-  // Mengeksekusi setiap 2 menit
   if (cur_millis - prev_millis >= interval) {
     prev_millis = cur_millis;
 
