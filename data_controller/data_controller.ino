@@ -235,7 +235,7 @@ void send_data(){
       Serial.println("Data sended to Firestore");
 
       String response = http.getString();                 // Respons from server
-      // Serial.println("Response: " + response);
+      Serial.println("Response: " + response);
     } else {
       Serial.println("Fail to send data");
       Serial.println("Error sending POST: " + String(httpResponseCode));
