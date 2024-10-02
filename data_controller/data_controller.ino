@@ -29,8 +29,8 @@ const bool arr_data_config[] = {
   false,   // Battery Percentage
   true,   // Latitude
   true,   // Longtitude
-  true,   // Is Active?
-  true,   // Timestamp?
+  true,   // Is Active
+  true,   // Timestamp
 };
 
 // Other data to be sent
@@ -43,7 +43,7 @@ const String charger_type = "CCS2";
 bool is_active = false;
 
 // Time interval for updating data
-unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, or 5 sec interval to send data
+unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};   // 2 min, 1 min, 30 sec, or 5 sec interval to send data
 unsigned long interval = arr_interval[3];
 unsigned long prev_millis = 0;
 
@@ -54,8 +54,6 @@ int iteration = 1;
 // |            GPS LOCATION CONFIGURATION             |
 // =====================================================
 
-// const double latitude = -6.25192922646693;
-// const double longitude = 106.84180629007942;
 double latitude, longitude;
 
 // The TinyGPSPlus object
@@ -95,15 +93,14 @@ float temp_C = 0;
 // =====================================================
 
 // NTP Server and time offset
-// const long utc_offset_in_seconds = 28800; // 8 hours for Central Indonesian Time (WITA)
-const long utc_offset_in_seconds = 25200; // 7 hours for Central Indonesian Time (WIB)
+const long utc_offset_in_seconds = 25200;   // 7 hours offset for Central Indonesian Time (WIB)
 const char* ntp_server = "pool.ntp.org";
 
 // Create an object for the NTP client
 WiFiUDP ntp_UDP;
 NTPClient timeClient(ntp_UDP, ntp_server, utc_offset_in_seconds);
 
-unsigned long timestamp;  // Variable to store time in UNIX timestamp format
+unsigned long timestamp;    // Variable to store time in UNIX timestamp format
 
 
 // =====================================================
@@ -115,17 +112,14 @@ float calibrate_voltage(float value){
 }
 
 float calibrate_current(float value){
-  return (value / 1000) * 60.2;             // 1000 is value to convert mA to A
+  return (value / 1000) * 60.2;   // 1000 is value to convert mA to A
 }
 
 float calibrate_power(float value){
-  // 1000000 is value to convert mW to kW
-  // return (value / 1000000) * 677.42;
   return (value / 10000) * 677.42;
 }
 
 float get_power_persentage(float value){
-  // percentagePower = (nilai sensor / 18.8 ) * 100%
   return (value / 18.8) * 100;
 }
 
@@ -136,21 +130,20 @@ void read_data(){
   power_mW = ina219.getPower_mW();          // mW
 
   // Calculates battery percentage
-  // Battery Percentage = ((BV-9V)/(11.1V-9V))X100%
   battery_percentage = ((voltage_V - zero_voltage) / (full_voltage - zero_voltage)) * 100;
 
   // Read temperature in Celsius
   temp_C = dht22.readTemperature();
 
   // Calibrating
-  calibrated_voltage_V = calibrate_voltage(voltage_V);    // V
-  calibrated_current_A = calibrate_current(current_mA);   // A
-  calibrated_power_kW = calibrate_power(power_mW);        // kW
-  persentage_calibrated_power = get_power_persentage(calibrated_power_kW);    // %
+  calibrated_voltage_V = calibrate_voltage(voltage_V);                      // V
+  calibrated_current_A = calibrate_current(current_mA);                     // A
+  calibrated_power_kW = calibrate_power(power_mW);                          // kW
+  persentage_calibrated_power = get_power_persentage(calibrated_power_kW);  // %
 
   // Read GPS Data
-  latitude = gps.location.isValid() ? gps.location.lat() :  -6.25192922646693;
-  longitude = gps.location.isValid() ? gps.location.lng() : 106.84180629007942;
+  latitude = gps.location.lat();
+  longitude = gps.location.lng();
 
   // Set is_active
   is_active = calibrated_current_A <= 0 ? false : true;
@@ -273,7 +266,7 @@ void display_banner(){
 }
 
 void print_readable_time(unsigned long epoch_time) {
-  // Konversi epoch time menjadi waktu yang mudah dibaca
+  // Convert epoch time to readable time
   time_t raw_time = epoch_time;
   struct tm *time_info;
   time_info = localtime(&raw_time);
@@ -282,7 +275,6 @@ void print_readable_time(unsigned long epoch_time) {
   char buffer[30];
   strftime(buffer, sizeof(buffer), "%H:%M:%S %d/%m/%Y", time_info);
 
-  // Cetak waktu yang telah diformat
   Serial.print("Waktu sekarang: ");
   Serial.println(buffer);
 }

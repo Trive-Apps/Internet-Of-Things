@@ -30,8 +30,8 @@ void setup() {
 
     // Set up the web server routes
   server.on("/", handleRoot);
-  server.on("/up", handleMoveForward);
-  server.on("/down", handleMoveBackward);
+  server.on("/forward", handleMoveForward);
+  server.on("/backward", handleMoveBackward);
   server.on("/left", handleTurnLeft);
   server.on("/right", handleTurnRight);
   server.on("/stop", handleMotorStop);
