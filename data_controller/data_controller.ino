@@ -93,7 +93,7 @@ float temp_C = 0;
 // =====================================================
 
 // NTP Server and time offset
-const long utc_offset_in_seconds = 25200;   // 7 hours offset for Central Indonesian Time (WIB)
+const long utc_offset_in_seconds = 25200;   // 7 hours offset for WIB
 const char* ntp_server = "pool.ntp.org";
 
 // Create an object for the NTP client
