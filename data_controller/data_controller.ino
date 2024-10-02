@@ -43,7 +43,7 @@ const String charger_type = "CCS2";
 bool is_active = false;
 
 // Time interval for updating data
-unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, 5 sec interval to send data
+unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, or 5 sec interval to send data
 unsigned long interval = arr_interval[3];
 unsigned long prev_millis = 0;
 
@@ -54,8 +54,8 @@ int iteration = 1;
 // |            GPS LOCATION CONFIGURATION             |
 // =====================================================
 
-// const double latitude = -6.2519242;
-// const double longitude = 106.8392311;
+// const double latitude = -6.25192922646693;
+// const double longitude = 106.84180629007942;
 double latitude, longitude;
 
 // The TinyGPSPlus object
@@ -95,7 +95,8 @@ float temp_C = 0;
 // =====================================================
 
 // NTP Server and time offset
-const long utc_offset_in_seconds = 28800; // 8 hours for Central Indonesian Time (WITA)
+// const long utc_offset_in_seconds = 28800; // 8 hours for Central Indonesian Time (WITA)
+const long utc_offset_in_seconds = 25200; // 7 hours for Central Indonesian Time (WIB)
 const char* ntp_server = "pool.ntp.org";
 
 // Create an object for the NTP client
@@ -148,11 +149,11 @@ void read_data(){
   persentage_calibrated_power = get_power_persentage(calibrated_power_kW);    // %
 
   // Read GPS Data
-  latitude = gps.location.isValid() ? gps.location.lat() : -6.2519242;
-  longitude = gps.location.isValid() ? gps.location.lng() : 106.8392311;
+  latitude = gps.location.isValid() ? gps.location.lat() :  -6.25192922646693;
+  longitude = gps.location.isValid() ? gps.location.lng() : 106.84180629007942;
 
   // Set is_active
-  is_active = calibrated_voltage_V >= 100 && calibrated_current_A <= 0 ? false : true;
+  is_active = calibrated_current_A <= 0 ? false : true;
 
   // Update time from NTP server & gets the timestamp of the epoch time
   timeClient.update();
@@ -241,7 +242,7 @@ void send_data(){
       Serial.println("Data sended to Firestore");
 
       String response = http.getString();                 // Respons from server
-      Serial.println("Response: " + response);
+      // Serial.println("Response: " + response);
     } else {
       Serial.println("Fail to send data");
       Serial.println("Error sending POST: " + String(httpResponseCode));
@@ -327,7 +328,6 @@ void setup(){
 void loop(){
   unsigned long cur_millis = millis();
 
-  // Mengeksekusi setiap 2 menit
   if (cur_millis - prev_millis >= interval) {
     prev_millis = cur_millis;
 
