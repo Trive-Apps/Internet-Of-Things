@@ -36,6 +36,10 @@ void setup() {
   server.on("/right", handleTurnRight);
   server.on("/stop", handleMotorStop);
   server.on("/setSpeed", handleSetMotorSpeed);
+  server.on("/forwardLeft", handleForwardLeft);
+  server.on("/forwardRight", handleForwardRight);
+  server.on("/backwardLeft", handleBackwardLeft);
+  server.on("/backwardRight", handleBackwardRight);
 
   // Start the web server
   server.begin();
@@ -64,7 +68,7 @@ void loop() {
 void handleRoot() {
   String html ="<!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>ESP32 Remote Control & Firestore Data</title> <link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css\"> <link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet";
   html +="1.7.1/dist/leaflet.css\" /> <style> #map { height: 300px; width: 100%; } .controller-btn { width: 100px; height: 100px; font-size: 24px; } </style> <script src=\"https://unpkg.com/leaflet";
-  html +="1.7.1/dist/leaflet.js\"></script> <script> function convertUnixTimestamp(unix_timestamp) { const date = new Date(unix_timestamp * 1000); return date.toISOString().replace('T', ' ').substring(0, 19); } function initializeMap(lat, lon) { const map = L.map('map').setView([lat, lon], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map); L.marker([lat, lon]).addTo(map) .bindPopup(`Latitude: ${lat}, Longitude: ${lon}`) .openPopup(); } async function fetchFirestoreData() { const url = 'https://firestore.googleapis.com/v1/projects/trive-221ec/databases/(default)/documents/car'; try { const response = await fetch(url); const data = await response.json(); if (data.documents) { const sortedDocuments = data.documents.sort((a, b) => new Date(b.createTime) - new Date(a.createTime)); const latestDocument = sortedDocuments[0]; const fields = latestDocument.fields; document.getElementById('carBrand').innerText = fields.brand.stringValue; document.getElementById('carType').innerText = fields.type.stringValue; document.getElementById('temperature').innerText = fields.temperature.doubleValue + ' °C'; document.getElementById('power').innerText = fields.power.doubleValue + ' kW'; document.getElementById('voltage').innerText = fields.voltage.doubleValue + ' V'; document.getElementById('current').innerText = fields.current.doubleValue + ' A'; document.getElementById('chargerType').innerText = fields.chargerType.stringValue; document.getElementById('latitude').innerText = fields.latitude.doubleValue; document.getElementById('longitude').innerText = fields.longitude.doubleValue; const unixTimestamp = fields.timestamp.integerValue; const readableTime = convertUnixTimestamp(unixTimestamp); document.getElementById('timestamp').innerText = readableTime; initializeMap(fields.latitude.doubleValue, fields.longitude.doubleValue); } } catch (error) { console.error('Error fetching Firestore data:', error); } } window.onload = fetchFirestoreData; function sendCommand(command) { var xhttp = new XMLHttpRequest(); xhttp.open(\"GET\", \"/\" + command, true); xhttp.send(); } function setSpeed() { var speed = document.getElementById(\"speedSlider\").value; var xhttp = new XMLHttpRequest(); xhttp.open(\"GET\", \"/setSpeed?speedA=\" + speed + \"&speedB=\" + speed, true); xhttp.send(); } function updateSpeedLabel() { var slider = document.getElementById(\"speedSlider\"); var label = document.getElementById(\"speedLabel\"); label.innerText = slider.value; } </script> </head> <body style=\"height: 100vh; overflow: hidden;\"> <div class=\"container-fluid h-100\"> <div class=\"row h-100\"> <!-- Data mobil dan peta --> <div class=\"col overflow-auto\" style=\"max-height: 100%;\"> <div class=\"card mt-4\"> <div class=\"card-body\"> <h5 class=\"card-title\">Car Data</h5> <p><strong>Brand:</strong> <span id=\"carBrand\">Loading...</span></p> <p><strong>Type:</strong> <span id=\"carType\">Loading...</span></p> <p><strong>Temperature:</strong> <span id=\"temperature\">Loading...</span></p> <p><strong>Power:</strong> <span id=\"power\">Loading...</span></p> <p><strong>Voltage:</strong> <span id=\"voltage\">Loading...</span></p> <p><strong>Current:</strong> <span id=\"current\">Loading...</span></p> <p><strong>Charger Type:</strong> <span id=\"chargerType\">Loading...</span></p> <p><strong>Latitude:</strong> <span id=\"latitude\">Loading...</span></p> <p><strong>Longitude:</strong> <span id=\"longitude\">Loading...</span></p> <p><strong>Timestamp:</strong> <span id=\"timestamp\">Loading...</span></p> </div> </div> <div class=\"card mt-4\"> <div class=\"card-body\"> <h5 class=\"card-title\">Location Map</h5> <div id=\"map\" style=\"height: 300px;\">Loading map...</div> </div> </div> </div> <!-- Remote control buttons with 3 rows --> <div class=\"col overflow-auto\" style=\"max-height: 100%;\"> <div class=\"row text-center mt-4\"> <div class=\"col-12\"> <button class=\"btn btn-success controller-btn\" onclick=\"sendCommand('forward')\">Maju</button> </div> </div> <div class=\"row text-center mt-4\"> <div class=\"col-4\"> <button class=\"btn btn-warning controller-btn\" onclick=\"sendCommand('left')\">Kiri</button> </div> <div class=\"col-4\"> <button class=\"btn btn-danger controller-btn\" onclick=\"sendCommand('stop')\">Stop</button> </div> <div class=\"col-4\"> <button class=\"btn btn-warning controller-btn\" onclick=\"sendCommand('right')\">Kanan</button> </div> </div> <div class=\"row text-center mt-4\"> <div class=\"col-12\"> <button class=\"btn btn-success controller-btn\" onclick=\"sendCommand('backward')\">Mundur</button> </div> </div> <!-- Kontrol kecepatan menggunakan satu slider --> <div class=\"row text-center mt-4\"> <div class=\"col-md-12\"> <label for=\"speedSlider\">Kecepatan Motor: <span id=\"speedLabel\">120</span></label> <input type=\"range\" id=\"speedSlider\" class=\"form-control-range\" min=\"120\" max=\"255\" value=\"120\" oninput=\"updateSpeedLabel()\"> </div> </div> <div class=\"row text-center mt-4\"> <div class=\"col-md-12\"> <button class=\"btn btn-primary btn-lg\" onclick=\"setSpeed()\">Set Speed</button> </div> </div> </div> </div> </div> </body>";
+  html +="1.7.1/dist/leaflet.js\"></script> <script> function convertUnixTimestamp(unix_timestamp) { const date = new Date(unix_timestamp * 1000); return date.toISOString().replace('T', ' ').substring(0, 19); } function initializeMap(lat, lon) { const map = L.map('map').setView([lat, lon], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map); L.marker([lat, lon]).addTo(map) .bindPopup(`Latitude: ${lat}, Longitude: ${lon}`) .openPopup(); } async function fetchFirestoreData() { const url = 'https://firestore.googleapis.com/v1/projects/trive-221ec/databases/(default)/documents/car'; try { const response = await fetch(url); const data = await response.json(); if (data.documents) { const sortedDocuments = data.documents.sort((a, b) => new Date(b.createTime) - new Date(a.createTime)); const latestDocument = sortedDocuments[0]; const fields = latestDocument.fields; document.getElementById('carBrand').innerText = fields.brand.stringValue; document.getElementById('carType').innerText = fields.type.stringValue; document.getElementById('temperature').innerText = fields.temperature.doubleValue + ' °C'; document.getElementById('power').innerText = fields.power.doubleValue + ' kW'; document.getElementById('voltage').innerText = fields.voltage.doubleValue + ' V'; document.getElementById('current').innerText = fields.current.doubleValue + ' A'; document.getElementById('chargerType').innerText = fields.chargerType.stringValue; document.getElementById('latitude').innerText = fields.latitude.doubleValue; document.getElementById('longitude').innerText = fields.longitude.doubleValue; const unixTimestamp = fields.timestamp.integerValue; const readableTime = convertUnixTimestamp(unixTimestamp); document.getElementById('timestamp').innerText = readableTime; initializeMap(fields.latitude.doubleValue, fields.longitude.doubleValue); } } catch (error) { console.error('Error fetching Firestore data:', error); } } window.onload = fetchFirestoreData; function sendCommand(command) { var xhttp = new XMLHttpRequest(); xhttp.open(\"GET\", \"/\" + command, true); xhttp.send(); } function setSpeed() { var speed = document.getElementById(\"speedSlider\").value; var xhttp = new XMLHttpRequest(); xhttp.open(\"GET\", \"/setSpeed?speedA=\" + speed + \"&speedB=\" + speed, true); xhttp.send(); } function updateSpeedLabel() { var slider = document.getElementById(\"speedSlider\"); var label = document.getElementById(\"speedLabel\"); label.innerText = slider.value; } </script> </head> <body style=\"height: 100vh; overflow: hidden;\"> <div class=\"container-fluid h-100\"> <div class=\"row h-100\"> <!-- Data mobil dan peta --> <div class=\"col overflow-auto\" style=\"max-height: 100%;\"> <div class=\"card mt-4\"> <div class=\"card-body\"> <h5 class=\"card-title\">Car Data</h5> <p><strong>Brand:</strong> <span id=\"carBrand\">Loading...</span></p> <p><strong>Type:</strong> <span id=\"carType\">Loading...</span></p> <p><strong>Temperature:</strong> <span id=\"temperature\">Loading...</span></p> <p><strong>Power:</strong> <span id=\"power\">Loading...</span></p> <p><strong>Voltage:</strong> <span id=\"voltage\">Loading...</span></p> <p><strong>Current:</strong> <span id=\"current\">Loading...</span></p> <p><strong>Charger Type:</strong> <span id=\"chargerType\">Loading...</span></p> <p><strong>Latitude:</strong> <span id=\"latitude\">Loading...</span></p> <p><strong>Longitude:</strong> <span id=\"longitude\">Loading...</span></p> <p><strong>Timestamp:</strong> <span id=\"timestamp\">Loading...</span></p> </div> </div> <div class=\"card mt-4\"> <div class=\"card-body\"> <h5 class=\"card-title\">Location Map</h5> <div id=\"map\" style=\"height: 300px;\">Loading map...</div> </div> </div> </div> <!-- Remote control buttons with 3 rows --> <div class=\"col overflow-auto\" style=\"max-height: 100%;\"> <div class=\"row text-center mt-4\"> <div class=\"col-4\"> <button class=\"btn btn-warning controller-btn\" onclick=\"sendCommand('forwardLeft')\">FL</button> </div> <div class=\"col-4\"> <button class=\"btn btn-success controller-btn\" onclick=\"sendCommand('forward')\">F</button> </div> <div class=\"col-4\"> <button class=\"btn btn-warning controller-btn\" onclick=\"sendCommand('forwardRight')\">FR</button> </div> </div> <div class=\"row text-center mt-4\"> <div class=\"col-4\"> <button class=\"btn btn-success controller-btn\" onclick=\"sendCommand('left')\">L</button> </div> <div class=\"col-4\"> <button class=\"btn btn-danger controller-btn\" onclick=\"sendCommand('stop')\">S</button> </div> <div class=\"col-4\"> <button class=\"btn btn-success controller-btn\" onclick=\"sendCommand('right')\">R</button> </div> </div> <div class=\"row text-center mt-4\"> <div class=\"col-4\"> <button class=\"btn btn-warning controller-btn\" onclick=\"sendCommand('backwardLeft')\">BL</button> </div> <div class=\"col-4\"> <button class=\"btn btn-success controller-btn\" onclick=\"sendCommand('backward')\">B</button> </div> <div class=\"col-4\"> <button class=\"btn btn-warning controller-btn\" onclick=\"sendCommand('backwardRight')\">BR</button> </div> </div> <!-- Kontrol kecepatan menggunakan satu slider --> <div class=\"row text-center mt-4\"> <div class=\"col-md-12\"> <label for=\"speedSlider\">Kecepatan Motor: <span id=\"speedLabel\">120</span></label> <input type=\"range\" id=\"speedSlider\" class=\"form-control-range\" min=\"120\" max=\"255\" value=\"120\" oninput=\"updateSpeedLabel()\"> </div> </div> <div class=\"row text-center mt-4\"> <div class=\"col-md-12\"> <button class=\"btn btn-primary btn-lg\" onclick=\"setSpeed()\">Set Speed</button> </div> </div> </div> </div> </div> </body>";
 
   server.send(200, "text/html", html);
 }
@@ -94,7 +98,7 @@ void handleMoveForward() {
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, HIGH);
-  setMotorSpeed(190, 190);
+  setMotorSpeed(200, 200);
   Serial.println("Moving forward");
   server.send(200, "text/plain", "Forward");
 }
@@ -104,7 +108,7 @@ void handleMoveBackward() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
-  setMotorSpeed(190, 190);
+  setMotorSpeed(200, 200);
   Serial.println("Moving backward");
   server.send(200, "text/plain", "Backward");
 }
@@ -112,23 +116,53 @@ void handleMoveBackward() {
 void handleTurnLeft() {
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, HIGH);
-  
-  setMotorSpeed(120, 190);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  setMotorSpeed(200, 200);
   Serial.println("Turning left");
   server.send(200, "text/plain", "Turning left");
 }
 
 void handleTurnRight() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  setMotorSpeed(200, 200);
+  Serial.println("Turning right");
+  server.send(200, "text/plain", "Turning right");
+}
+
+void handleBackwardLeft() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  setMotorSpeed(150, 255);
+}
+
+void handleBackwardRight() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  setMotorSpeed(255, 150);
+}
+
+void handleForwardLeft() {
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, HIGH);
+  setMotorSpeed(150, 255);
+}
 
-  setMotorSpeed(190, 120);
-  Serial.println("Turning right");
-  server.send(200, "text/plain", "Turning right");
+void handleForwardRight() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  setMotorSpeed(255, 150);
 }
 
 void handleMotorStop() {

@@ -114,26 +114,38 @@
         <!-- Remote control buttons with 3 rows -->
         <div class="col overflow-auto" style="max-height: 100%;">
           <div class="row text-center mt-4">
-            <div class="col-12">
-              <button class="btn btn-success controller-btn" onclick="sendCommand('forward')">Maju</button>
+            <div class="col-4">
+              <button class="btn btn-warning controller-btn" onclick="sendCommand('forwardLeft')">FL</button>
+            </div>
+            <div class="col-4">
+              <button class="btn btn-success controller-btn" onclick="sendCommand('forward')">F</button>
+            </div>
+            <div class="col-4">
+              <button class="btn btn-warning controller-btn" onclick="sendCommand('forwardRight')">FR</button>
             </div>
           </div>
           
           <div class="row text-center mt-4">
             <div class="col-4">
-              <button class="btn btn-warning controller-btn" onclick="sendCommand('left')">Kiri</button>
+              <button class="btn btn-success controller-btn" onclick="sendCommand('left')">L</button>
             </div>
             <div class="col-4">
-              <button class="btn btn-danger controller-btn" onclick="sendCommand('stop')">Stop</button>
+              <button class="btn btn-danger controller-btn" onclick="sendCommand('stop')">S</button>
             </div>
             <div class="col-4">
-              <button class="btn btn-warning controller-btn" onclick="sendCommand('right')">Kanan</button>
+              <button class="btn btn-success controller-btn" onclick="sendCommand('right')">R</button>
             </div>
           </div>
           
           <div class="row text-center mt-4">
-            <div class="col-12">
-              <button class="btn btn-success controller-btn" onclick="sendCommand('backward')">Mundur</button>
+            <div class="col-4">
+              <button class="btn btn-warning controller-btn" onclick="sendCommand('backwardLeft')">BL</button>
+            </div>
+            <div class="col-4">
+              <button class="btn btn-success controller-btn" onclick="sendCommand('backward')">B</button>
+            </div>
+            <div class="col-4">
+              <button class="btn btn-warning controller-btn" onclick="sendCommand('backwardRight')">BR</button>
             </div>
           </div>
           
