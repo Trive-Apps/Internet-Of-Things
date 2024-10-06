@@ -44,7 +44,7 @@ bool is_active = false;
 
 // Time interval for updating data
 unsigned long arr_interval[] = {120000, 60000, 30000, 15000, 5000};  // 2 min, 1 min, 30 sec, or 5 sec interval to send data
-unsigned long interval = arr_interval[3];
+unsigned long interval = arr_interval[4];
 unsigned long prev_millis = 0;
 
 // Iteration
